@@ -356,4 +356,3 @@ def create_payroll_journal_entry(settings):
 	})
 	je.save()
 	je.submit()
-	
