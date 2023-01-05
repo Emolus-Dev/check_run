@@ -18,7 +18,9 @@
   "column_break_6",
   "company",
   "bank_account",
+  "bank_account_currency",
   "pay_to_account",
+  "accounts_payable_currency",
   "section_break_9",
   "check_run_table",
   "transactions",
@@ -147,14 +149,30 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Posting Date"
+  },
+  {
+   "fetch_from": "pay_to_account.account_currency",
+   "fieldname": "accounts_payable_currency",
+   "fieldtype": "Link",
+   "label": "Accounts Payable Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "bank_account_currency",
+   "fieldtype": "Link",
+   "label": "Bank Account Currency",
+   "options": "Currency",
+   "read_only": 1
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2022-08-07 15:37:57.183907",
+ "modified": "2023-01-05 15:54:13.759876",
  "modified_by": "Administrator",
  "module": "Check Run",
  "name": "Check Run",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
@@ -181,6 +199,7 @@
  "quick_entry": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1,
  "track_seen": 1,
  "track_views": 1

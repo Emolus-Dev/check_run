@@ -2,28 +2,25 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
-import json
-from itertools import groupby, zip_longest
-from io import StringIO
 
-from PyPDF2 import PdfFileWriter
+import json
+from io import StringIO
+from itertools import groupby, zip_longest
 
 import frappe
+from atnacha import ACHBatch, ACHEntry, NACHAFile
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import get_dimensions
+from erpnext.accounts.utils import get_balance_on
 from frappe.model.document import Document
-from frappe.utils.data import flt
-from frappe.utils.data import date_diff, add_days, nowdate, getdate, now, get_datetime
-from frappe.utils.print_format import read_multi_pdf
 from frappe.permissions import has_permission
-from frappe.utils.file_manager import save_file, remove_all, download_file
-from frappe.utils.password import get_decrypted_password
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Coalesce
+from frappe.utils.data import add_days, date_diff, flt, get_datetime, getdate, now, nowdate
+from frappe.utils.file_manager import download_file, remove_all, save_file
+from frappe.utils.password import get_decrypted_password
+from frappe.utils.print_format import read_multi_pdf
+from PyPDF2 import PdfFileWriter
 
-from erpnext.accounts.utils import get_balance_on
-from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import get_dimensions
-
-
-from atnacha import ACHEntry, ACHBatch, NACHAFile
 
 class CheckRun(Document):
 	def onload(self):
@@ -38,6 +35,10 @@ class CheckRun(Document):
 		gl_account = frappe.get_value('Bank Account', self.bank_account, 'account')
 		if not gl_account:
 			frappe.throw(frappe._("This Bank Account is not associated with a General Ledger Account."))
+
+		if self.accounts_payable_currency != self.bank_account_currency:
+			frappe.throw(frappe._("The Paid From (Bank Account) and Accounts Payable currencies must match"))
+
 		self.beg_balance = get_balance_on(gl_account, self.posting_date)
 		if self.flags.in_insert:
 			if self.initial_check_number is None:
@@ -157,7 +158,7 @@ class CheckRun(Document):
 		for party, _group in groupby(transactions, key=lambda x: x.party):
 			_group = list(_group)
 			if frappe.db.get_value('Mode of Payment', _group[0].mode_of_payment, 'type') == 'Bank':
-				groups = list(zip_longest(*[iter(_group)] * split)) 
+				groups = list(zip_longest(*[iter(_group)] * split))
 			else:
 				groups = [_group]
 			if not groups:
@@ -185,7 +186,7 @@ class CheckRun(Document):
 					self.final_check_number = pe.reference_no
 				else:
 					pe.reference_no = frappe._(f"via {_group[0].mode_of_payment} {self.get_formatted('posting_date')}")
-				
+
 				for reference in group:
 					if not reference:
 						continue
@@ -261,7 +262,7 @@ class CheckRun(Document):
 			frappe.db.set_value('Check Run', self.name, 'initial_check_number', self.initial_check_number)
 			frappe.db.set_value('Check Run', self.name, 'final_check_number', self.initial_check_number + check_increment -1)
 			frappe.db.set_value('Bank Account', self.bank_account, 'check_number', self.final_check_number)
-		
+
 		frappe.db.set_value('Check Run', self.name, 'status', 'Ready to Print')
 		save_file(f"{self.name}.pdf", read_multi_pdf(output), 'Check Run', self.name, 'Home/Check Run', False, 0)
 
@@ -291,7 +292,7 @@ def check_for_draft_check_run(company, bank_account, payable_account):
 def confirm_print(docname):
 	# Remove PDF file(s)
 	remove_all('Check Run', docname, from_delete=False, delete_permanently=False)
-	
+
 	# Reset status
 	return frappe.db.set_value('Check Run', docname, 'status', 'Printed')
 
@@ -300,8 +301,8 @@ def confirm_print(docname):
 def get_entries(doc):
 	doc = frappe._dict(json.loads(doc)) if isinstance(doc, str) else doc
 	if isinstance(doc.end_date, str):
-		doc.end_date = getdate(doc.end_date) 
-		doc.posting_date = getdate(doc.posting_date) 
+		doc.end_date = getdate(doc.end_date)
+		doc.posting_date = getdate(doc.posting_date)
 	modes_of_payment = frappe.get_all('Mode of Payment', order_by='name')
 	if frappe.db.exists('Check Run Settings', {'bank_account': doc.bank_account, 'pay_to_account': doc.pay_to_account}):
 		settings = frappe.get_doc('Check Run Settings', {'bank_account': doc.bank_account, 'pay_to_account': doc.pay_to_account})
@@ -374,7 +375,7 @@ def get_entries(doc):
 	je_accounts = frappe.qb.DocType('Journal Entry Account')
 	payment_entries = frappe.qb.DocType('Payment Entry')
 	pe_ref = frappe.qb.DocType('Payment Entry Reference')
-	
+
 	sub_q = (
 		frappe.qb.from_(payment_entries)
 			.inner_join(pe_ref)
@@ -407,7 +408,7 @@ def get_entries(doc):
 			.where(journal_entries.due_date <= end_date)
 			.where((journal_entries.name).notin(sub_q))
 	)
-	
+
 	if not settings:
 		query = pi_qb.union(ec_qb).union(je_qb)
 	else:
@@ -509,7 +510,7 @@ def build_nacha_file_from_payment_entries(doc, payment_entries, settings):
 			if not party_bank_routing_number:
 				exceptions.append(f'{pe.party_type} Bank Routing Number missing for {pe.party_name}/{employee_bank}')
 		ach_entry = ACHEntry(
-			transaction_code=22, # checking account 
+			transaction_code=22, # checking account
 			receiving_dfi_identification=party_bank_routing_number,
 			check_digit=5,
 			dfi_account_number=party_bank_account,
@@ -520,7 +521,7 @@ def build_nacha_file_from_payment_entries(doc, payment_entries, settings):
 			addenda_record_indicator=0,
 		)
 		ach_entries.append(ach_entry)
-	
+
 	if exceptions:
 		frappe.throw('<br>'.join(e for e in exceptions))
 
@@ -560,3 +561,17 @@ def get_check_run_settings(doc):
 	doc = frappe._dict(json.loads(doc)) if isinstance(doc, str) else doc
 	if frappe.db.exists('Check Run Settings', {'bank_account': doc.bank_account, 'pay_to_account': doc.pay_to_account}):
 		return frappe.get_doc('Check Run Settings', {'bank_account': doc.bank_account, 'pay_to_account': doc.pay_to_account})
+
+
+@frappe.whitelist()
+def get_bank_account_currency(bank_account):
+	if not bank_account:
+		return
+
+	acc_bank = frappe.db.get_value('Bank Account', bank_account, 'account')
+	acc_currency = frappe.db.get_value('Account', acc_bank, 'account_currency')
+
+	if not acc_currency:
+		frappe.throw(f'Currency not set for Bank Account {bank_account} : {acc_bank}')
+
+	return acc_currency

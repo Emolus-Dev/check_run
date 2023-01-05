@@ -3,17 +3,21 @@
     <table class="table table-compact table-hover check-run-table" style="text-align: center; margin: 0">
       <thead>
         <tr>
+          <!-- Party -->
           <th style="text-align: left" class="col col-sm-2" id="check-run-party-filter">
             <span class="party-onclick party-display">{{ __('Party') }}</span>
-            <span class="filter-icon"
-              ><svg class="icon icon-sm" @click="toggleShowPartyFilter()">
-                <use href="#icon-filter" /></svg
-            ></span>
+            <span class="filter-icon">
+              <svg class="icon icon-sm" @click="toggleShowPartyFilter()">
+                <use href="#icon-filter"></use>
+              </svg>
+            </span>
             <div class="party-filter" v-if="state.show_party_filter">
               <input type="text" class="form-control" v-model="state.party_filter" />
             </div>
           </th>
+          <!-- Document -->
           <th class="col col-sm-2">{{ __('Document') }}</th>
+          <!-- Document Date -->
           <th class="col col-sm-2" style="white-space: nowrap; width: 12.49%">
             {{ __('Document Date') }}
             <span
@@ -23,6 +27,7 @@
               >&#11021;</span
             >
           </th>
+          <!-- Mode of Payment -->
           <th class="col col-sm-2" tyle="white-space: nowrap; width: 12.49%">
             {{ __('Mode of Payment') }}
             <span
@@ -32,6 +37,7 @@
               >&#11021;</span
             >
           </th>
+          <!-- Outstanding Amount -->
           <th class="col col-sm-2">
             {{ __('Outstanding Amount') }}
             <span
@@ -41,6 +47,7 @@
               >&#11021;</span
             >
           </th>
+          <!-- Due Date -->
           <th class="col col-sm-1">
             {{ __('Due Date') }}
             <span
@@ -50,6 +57,7 @@
               >&#11021;</span
             >
           </th>
+          <!-- Selector (All) -->
           <th v-if="state.docstatus < 1" style="min-width: 200px; text-align: left">
             <input
               type="checkbox"
@@ -59,7 +67,6 @@
               id="select-all"
               v-model="selectAll" /><span>{{ __('Select All') }}</span>
           </th>
-
           <th v-else class="col col-sm-2">{{ __('Check Number') }} | {{ __('Reference') }}</th>
         </tr>
       </thead>
@@ -73,15 +80,20 @@
             :class="{ selectedRow: state.selectedRow == i }"
             tabindex="1"
             @click="state.selectedRow = i">
+            <!-- Party -->
             <td style="text-align: left">
               {{ item.party_name || item.party }}
             </td>
+            <!-- Document -->
             <td>
               <a :href="transactionUrl(item)" target="_blank">
                 {{ item.ref_number || item.name }}
               </a>
             </td>
-            <td>{{ item.posting_date }}</td>
+            <!-- Document Date -->
+            <td>{{ moment(item.posting_date).format('DD/MM/YY') }}</td>
+
+            <!-- Mode of Payment -->
             <td class="mop-onclick" :data-mop-index="i">
               <ADropdown
                 ref="dropdowns"
@@ -94,8 +106,11 @@
 
               <span v-else>{{ transactions[i].mode_of_payment }}</span>
             </td>
-            <td>{{ format_currency(item.amount, 'USD', 2) }}</td>
-            <td>{{ moment(item.due_date).format('MM/DD/YY') }}</td>
+            <!-- Outstanding Amount -->
+            <td>{{ format_currency(item.amount, f_currency, 2) }}</td>
+            <!-- Due Date -->
+            <td>{{ moment(item.due_date).format('DD/MM/YY') }}</td>
+            <!-- Selector (All) -->
             <td v-if="state.docstatus < 1" style="text-align: left">
               <input
                 type="checkbox"
@@ -124,7 +139,7 @@ export default {
   components: {
     ADropdown,
   },
-  props: ['transactions', 'modes_of_payment', 'docstatus', 'state'],
+  props: ['transactions', 'modes_of_payment', 'docstatus', 'state', 'f_currency'],
   data() {
     return {
       selectAll: false,
