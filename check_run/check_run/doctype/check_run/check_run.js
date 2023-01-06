@@ -231,7 +231,7 @@ function confirm_print(frm) {
       },
     ],
     minimizable: false,
-    static: true,
+    static: false,
   });
   d.wrapper.find('#confirm-print').on('click', () => {
     frappe
