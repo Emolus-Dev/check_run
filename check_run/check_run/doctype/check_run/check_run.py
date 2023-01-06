@@ -226,46 +226,49 @@ class CheckRun(Document):
 
 	@frappe.whitelist()
 	def render_check_pdf(self, reprint_check_number=None):
-		if not frappe.db.exists('File', 'Home/Check Run'):
-			frappe.new_doc("File").update({"file_name":"Check Run", "is_folder": True, "folder":"Home"}).save()
-		settings = get_check_run_settings(self)
-		initial_check_number = int(self.initial_check_number)
-		if reprint_check_number and reprint_check_number != 'undefined':
-			self.initial_check_number = int(reprint_check_number)
-		output = PdfFileWriter()
-		transactions = json.loads(self.transactions)
-		check_increment = 0
-		_transactions = []
-		for pe, group in groupby(transactions, key=lambda x: x.get('payment_entry')):
-			group = list(group)
-			mode_of_payment, docstatus = frappe.db.get_value('Payment Entry', pe, ['mode_of_payment', 'docstatus'])
-			if docstatus == 1 and frappe.db.get_value('Mode of Payment', mode_of_payment, 'type') == 'Bank':
-				output = frappe.get_print(
-					'Payment Entry',
-					pe,
-					settings.print_format or frappe.get_meta('Payment Entry').default_print_format,
-					as_pdf=True,
-					output=output,
-					no_letterhead=0,
-				)
-				if initial_check_number != reprint_check_number:
-					frappe.db.set_value('Payment Entry', pe, 'reference_no', self.initial_check_number + check_increment)
+		try:
+			if not frappe.db.exists('File', 'Home/Check Run'):
+				frappe.new_doc("File").update({"file_name":"Check Run", "is_folder": True, "folder":"Home"}).save()
+			settings = get_check_run_settings(self)
+			initial_check_number = int(self.initial_check_number)
+			if reprint_check_number and reprint_check_number != 'undefined':
+				self.initial_check_number = int(reprint_check_number)
+			output = PdfFileWriter()
+			transactions = json.loads(self.transactions)
+			check_increment = 0
+			_transactions = []
+			for pe, group in groupby(transactions, key=lambda x: x.get('payment_entry')):
+				group = list(group)
+				mode_of_payment, docstatus = frappe.db.get_value('Payment Entry', pe, ['mode_of_payment', 'docstatus'])
+				if docstatus == 1 and frappe.db.get_value('Mode of Payment', mode_of_payment, 'type') == 'Bank':
+					output = frappe.get_print(
+						'Payment Entry',
+						pe,
+						settings.print_format or frappe.get_meta('Payment Entry').default_print_format,
+						as_pdf=True,
+						output=output,
+						no_letterhead=0,
+					)
+					if initial_check_number != reprint_check_number:
+						frappe.db.set_value('Payment Entry', pe, 'reference_no', self.initial_check_number + check_increment)
+						for ref in group:
+							ref['check_number'] = self.initial_check_number + check_increment
+							_transactions.append(ref)
+					check_increment += 1
+				elif docstatus == 1:
 					for ref in group:
-						ref['check_number'] = self.initial_check_number + check_increment
 						_transactions.append(ref)
-				check_increment += 1
-			elif docstatus == 1:
-				for ref in group:
-					_transactions.append(ref)
 
-		if _transactions and reprint_check_number:
-			frappe.db.set_value('Check Run', self.name, 'transactions', json.dumps(_transactions))
-			frappe.db.set_value('Check Run', self.name, 'initial_check_number', self.initial_check_number)
-			frappe.db.set_value('Check Run', self.name, 'final_check_number', self.initial_check_number + check_increment -1)
-			frappe.db.set_value('Bank Account', self.bank_account, 'check_number', self.final_check_number)
+			if _transactions and reprint_check_number:
+				frappe.db.set_value('Check Run', self.name, 'transactions', json.dumps(_transactions))
+				frappe.db.set_value('Check Run', self.name, 'initial_check_number', self.initial_check_number)
+				frappe.db.set_value('Check Run', self.name, 'final_check_number', self.initial_check_number + check_increment -1)
+				frappe.db.set_value('Bank Account', self.bank_account, 'check_number', self.final_check_number)
 
-		frappe.db.set_value('Check Run', self.name, 'status', 'Ready to Print')
-		save_file(f"{self.name}.pdf", read_multi_pdf(output), 'Check Run', self.name, 'Home/Check Run', False, 0)
+			frappe.db.set_value('Check Run', self.name, 'status', 'Ready to Print')
+			save_file(f"{self.name}.pdf", read_multi_pdf(output), 'Check Run', self.name, 'Home/Check Run', False, 0)
+		except Exception:
+			frappe.msgprint(frappe.get_traceback())
 
 
 @frappe.whitelist()

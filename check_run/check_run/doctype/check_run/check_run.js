@@ -25,6 +25,7 @@ frappe.ui.form.on('Check Run', {
     permit_first_user(frm);
     get_defaults(frm);
     set_queries(frm);
+    get_acc_bank_currency(frm);
     if (frm.is_new()) {
       get_balance(frm);
     }
