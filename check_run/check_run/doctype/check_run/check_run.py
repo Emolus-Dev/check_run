@@ -36,8 +36,9 @@ class CheckRun(Document):
 		if not gl_account:
 			frappe.throw(frappe._("This Bank Account is not associated with a General Ledger Account."))
 
-		if self.accounts_payable_currency != self.bank_account_currency:
-			frappe.throw(frappe._("The Paid From (Bank Account) and Accounts Payable currencies must match"))
+		if self.accounts_payable_currency and self.bank_account_currency:
+			if self.accounts_payable_currency != self.bank_account_currency:
+				frappe.throw(frappe._("The Paid From (Bank Account) and Accounts Payable currencies must match"))
 
 		self.beg_balance = get_balance_on(gl_account, self.posting_date)
 		if self.flags.in_insert:
@@ -508,7 +509,7 @@ def build_nacha_file_from_payment_entries(doc, payment_entries, settings):
 		if party_bank:
 			party_bank_routing_number = frappe.db.get_value('Bank', party_bank, 'aba_number')
 			if not party_bank_routing_number:
-				exceptions.append(f'{pe.party_type} Bank Routing Number missing for {pe.party_name}/{employee_bank}')
+				exceptions.append(f'{pe.party_type} Bank Routing Number missing for {pe.party_name}')  # /{employee_bank}
 		ach_entry = ACHEntry(
 			transaction_code=22, # checking account
 			receiving_dfi_identification=party_bank_routing_number,
@@ -523,7 +524,8 @@ def build_nacha_file_from_payment_entries(doc, payment_entries, settings):
 		ach_entries.append(ach_entry)
 
 	if exceptions:
-		frappe.throw('<br>'.join(e for e in exceptions))
+		# frappe.throw('<br>'.join(e for e in exceptions))
+		frappe.throw(f"exceptions: <br> <code>{exceptions}</code>")
 
 	batch = ACHBatch(
 		service_class_code=settings.ach_service_class_code,
