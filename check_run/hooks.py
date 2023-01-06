@@ -1,4 +1,5 @@
 from . import __version__ as app_version
+from .fixtures import fill_fixtures
 
 app_name = "check_run"
 app_title = "Check Run"
@@ -9,6 +10,8 @@ app_color = "grey"
 app_email = "support@agritheory.dev"
 app_license = "MIT"
 required_apps = ["erpnext", "hrms"]
+
+fixtures = fill_fixtures()
 
 # Includes in <head>
 # ------------------
