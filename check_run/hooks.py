@@ -177,8 +177,9 @@ after_migrate = 'check_run.customize.load_customizations'
 # For example: Role, Gender, etc.
 # translated_search_doctypes = []
 
-jenv = {
+jinja = {
 	"methods": [
-		"get_default_address:frappe.contacts.doctype.address.address.get_default_address"
+		# "get_default_address:frappe.contacts.doctype.address.address.get_default_address"
+		"frappe.contacts.doctype.address.address.get_default_address"
 	]
 }
