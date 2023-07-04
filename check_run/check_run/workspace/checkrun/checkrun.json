@@ -8,6 +8,7 @@
  "hide_custom": 0,
  "icon": "read-status",
  "idx": 0,
+ "is_hidden": 0,
  "label": "CheckRun",
  "links": [
   {
@@ -47,7 +48,7 @@
    "type": "Link"
   }
  ],
- "modified": "2023-01-06 14:40:00.761849",
+ "modified": "2023-07-04 10:58:49.902504",
  "modified_by": "Administrator",
  "module": "Check Run",
  "name": "CheckRun",
@@ -55,7 +56,17 @@
  "parent_page": "Emolus",
  "public": 1,
  "quick_lists": [],
- "roles": [],
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Accounts User"
+  }
+ ],
  "sequence_id": 42.0,
  "shortcuts": [],
  "title": "CheckRun"
